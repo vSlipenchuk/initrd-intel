@@ -1,0 +1,189 @@
+#!/bin/ash
+
+. /common
+
+mount -t proc /proc /proc
+mount -t sysfs none /sys
+#mount -t devfs devfs /dev
+
+#mount -o remount,rw /
+
+#mount -t cofs 31 /mnt/dev
+modprobe unionfs 2> /dev/null
+modprobe squashfs 2> /dev/null
+
+prnok "---- vinitrd coLinux, $VERSION, vSlipenchuk@gmail.com -------"
+
+if [ "$mntfind" != "" ]; then
+ dbg "... searching  [[$mntfind]] ..."
+ mnt_find2 $mntfind /mnt/dev
+ if [ "$?" != "0" ]; then 
+      fatal "cant mount device by file $mntfind";
+      halt
+ fi
+fi 
+ 
+if [ "$mntfind" = "" ]; then
+ dbg "mntdev=$mntdev"
+ dbg "begin update $mntdev"
+ if [ "$mntdev" = "" ]; then  mntdev="-t cofs 31"; fi;
+ #mntdev=$(echo $mntdev | sed -e "/s/;/ /g")
+ dbg "done update $mntdev"
+
+
+  if [ "$mntdir" = "" ]; then mntdir=""; fi; 
+
+  mount $mntdev /mnt/dev
+  if [ "$?" != "0" ]; then
+   #wait for USB devices to upp...
+   sleep 5
+   dofatal "mount $mntdev /mnt/dev" 
+  fi
+
+fi
+
+
+
+if [ "$modules" = "" ]; then fatal "'modules' not defined"; fi;
+
+modules=$(echo $modules | sed -e "s/;/ /g")
+i=0
+mnt=""
+amnt="" 
+dbg " --- mntdev:$mntdev mntdir:$mntdir starts --- "
+
+
+if [ "$copy2ram" = "1" ]; then
+ mount -t tmpfs tmpfs /mnt/tmp
+fi
+
+if [ "$addmodules" = "Y" ]; then
+kern=$(uname -r| sed 's/\+//')
+prnok "autoadd modules for kernel $kern"
+modules="$kern.sfs $modules"
+fi
+
+if [ ! "$auth" = "" ]; then  
+modules="$modules auth.sfs"
+fi
+
+for a in $modules ; do
+mname=/mnt/dev/$mntdir/$a
+ # 1) first - check if it is a dir ...
+ if [ -d $mname ]; then
+   prnok "[$a(DIR)$mname]" 
+   mnt=":$mname=ro$mnt"
+   continue
+ fi
+ # 2) - check - if loop file exists -- add suffix sfs ???
+ if [ !  -e $mname ]; then
+   if [ -e $mname.sfs ]; then
+   mname="$mname.sfs"
+   else
+    fatal "loop-file $mname not found"
+   fi
+ fi
+ 
+ dbg "...... start load$i module $a"
+ 
+  mkdir -p /mnt/$i
+ if [ "$copy2ram" = "1" ]; then
+ prnok "[copy2ram $a]"
+  
+ cp $mname /mnt/tmp/$a
+ res="$?"
+ # there is some bags - in busybox - cp returns 0 even if not full file copied
+ #echo copy res $res
+ if [ "$res" != "0" ]; then
+  fatal "copytoram failed"
+ fi
+ mount -o loop /mnt/tmp/$a /mnt/$i
+ else 
+ mount -o loop $mname /mnt/$i
+ fi
+ if [ "$?" = "0" ] ; then
+   prnok "[$a=/mnt/$i]"
+   mnt=":/mnt/$i=ro$mnt"
+   amnt=":/mnt/$i=ro$amnt"
+   let i=i+1
+ else
+   fatal "Failure load module $i $a";
+ fi
+done
+
+if [ "$copy2ram" = "1" ]; then
+#unmount tmp drive
+  umount /mnt/dev
+fi
+
+if [ "$changes" != "" ] ; then
+ mntfile=""
+ if [ -e "/mnt/dev/$mntdir/$changes" ]; then mntfile="/mnt/dev/$mntdir/$changes" 
+ elif [ -e "/mnt/dev/$changes" ] ; then mntfile="/mnt/dev/$changes";
+ else 
+    # need somewhere else
+    mkdir -p /mnt/dev2
+    #prnok "... searching [[$changes]]..."
+    mnt_find2 $changes /mnt/dev2
+    if [ "$?" != "0" ]; then 
+      fatal "cant mount device for file $changes";
+      halt
+    fi
+ mntfile="/mnt/dev2/$changes"
+ fi
+ mount -o loop $mntfile /mnt/changes
+ if [ "$?" = "0" ] ; then
+   prnok "[CHANGES: $mntfile]"
+ else
+   fatal "Changes $changes failed to mount"
+   changes=""
+ fi
+fi
+
+# apply live system
+if [ "$changes" = "" ]; then
+ mount -t tmpfs tmpfs /mnt/changes
+ if [ "$?" = "0" ]; then
+   prnok "[FRESH system (tmpfs)]"
+ else
+   fatal "Cant link tmps to changes"
+ fi
+fi
+
+
+dbg "All mounted, ready to mountunionfs"
+
+ mkdir -p /mnt/changes/proc
+ mkdir -p /mnt/changes/sys
+ mkdir -p /mnt/changes/dev
+ 
+# mount main system ...
+mnt="/mnt/changes=rw$mnt"
+if [ "$aufs" = "Y" ]; then
+mount -t aufs -o br=$mnt,noxino none /mnt/system
+else
+mount -t unionfs  -o dirs=$mnt unionfs /mnt/system 
+fi
+
+if [ "$?" != "0" ]; then
+ fatal "UnionFS or Aufs failed to mount $mnt"
+else
+ prnok "fs mounted Aufs:$aufs"
+fi
+
+if [ ! "$auth" = "" ]; then
+ mkdir -p /mnt/system/cfg/auth
+ file=/mnt/dev/$mntdir/$auth
+ mount -o loop $file /mnt/system/cfg/auth
+ . /mnt/system/cfg/auth/mount_on /mnt/system 
+ if [ "$?" = "0" ]; then 
+    prnok "mounted auth from $file"
+ else
+    fatal "cant mount auth from $file"
+ fi
+fi
+
+
+run_system
+
+fatal "Never be here, exec /sbin/init"

@@ -1,0 +1,59 @@
+s=""
+
+
+for sdir in  /home/bin/  /cfg/ /etc/rc.d/rc.
+do
+  #echo chck $sdir
+  if [ -f "$sdir$1" ]; then
+   s=$sdir$1
+   break
+  fi
+done
+
+
+case $1 in
+ dns) echo nameserver 8.8.8.8 > /etc/resolv.conf
+ ;;
+ install)
+ ln -s /cfg/srv /usr/bin/srv 
+ ;;
+ wins)
+ cp /etc/nsswitch.conf /tmp/nss
+ sed 's/files dns/files wins dns/g' < /tmp/nss > /etc/nsswitch.conf
+ #echo nsswitch.conf patched...
+ ;;
+ fw)
+    echo switch forwaring to $2
+    echo $2 > /proc/sys/net/ipv4/ip_forward
+ ;;
+ mnt)
+ /home/bin/mnt/$2 $3 $4
+ ;;
+ usb)
+ /cfg/x-two-finger
+ ;;
+ drop)
+ echo drop cash
+ sync; echo 3 > /proc/sys/vm/drop_caches
+ ;;
+ *)
+ if [ "$s" = "" ]; then
+   echo error: \"$1\" - service not found
+   exit 1
+ else 
+   correct="0"
+   if [ -x $s ] ; then
+     echo "service \"$s\" --->  $2 $3 $4"
+   else
+     echo "service \"$s\" correcing 'x' bit --> $2 $3 $4"
+     chmod +x $s
+     correct="1"
+   fi
+   $s $2 $3 $4
+   if [[ "$correct" = "1" ]]; then
+     chmod -x $s
+   fi
+ fi
+ 
+ ;;
+esac

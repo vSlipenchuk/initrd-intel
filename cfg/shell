@@ -1,0 +1,26 @@
+if [ -r "/opt/.wine/drive_c/Program Files/Microsoft Office/Office12/WINWORD.EXE" ] ; then
+ O="c:\\program files\\microsoft office\\office12\\"
+elif [ -r "/opt/.wine/drive_c/Program Files/Microsoft Office/OFFICE11/WINWORD.EXE" ] ; then
+ O="c:\\program files\\microsoft office\\office11\\"
+fi
+
+file="$1"
+ext="${file##*.}"
+
+#echo ext $ext, OFFICE $O
+
+if [ ! "$O" = "" ]; then
+ case "$ext" in
+   doc|DOC)
+     wine "$O\\winword.exe" "$file"&
+     exit 0
+     ;;
+   xls|XLS)
+     wine "$O\\excel.exe" "$file"&
+     exit 0
+     ;;
+ esac
+fi
+
+
+exo-open $1 $2 $3 $4  &

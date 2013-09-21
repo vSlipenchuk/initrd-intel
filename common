@@ -1,0 +1,94 @@
+#!/bin/ash
+
+VERSION=6a
+
+prnerr() { echo -en "\033[37;1;41m$1\033[0m\n" ; }
+prnok()  { echo -en "\033[40;1;32m$1\033[0m\n" ; }
+fatal()  { prnerr "FATAL : $1"; prnok "ash is running then system halted"; ash; halt;}
+
+dbg() {
+if [ "$dbg" != "" ] ; then
+  prnerr "DEBUG:$1";
+  answer=""; read -p "enter>" answer;
+  if [ "$answer" != "" ] ; then
+    echo "ANSWER=$answer, start a shell"
+    ash -c "$answer"
+  fi
+fi
+}
+
+
+mnt_find() {
+file=$1
+mnt22=$2
+chked=""
+fnd=""
+echo -en "\033[40;1;36m$file is searching...\033[0m"
+for a in $(ls -1d /dev/sd* /dev/hd*) ; do
+ dbg "try mount $a"
+ mount $a $mnt22 2> /dev/null
+ dbg "done mount $a"
+ #echo -en "."
+ #echo last cmd $? for $a
+ if [ "$?" = "0" ]; then
+ #echo MOUNT_OK $a
+  if [ -e "$mnt22/$file" ] ; then
+   #echo FILE $file exists on $a
+   fnd="$fnd$a;";
+   if [ "$2" != "" ]; then
+   #echo $a;
+   prnok "[$a]"
+   return 0
+   fi
+  else
+    chked="$chked$a;"
+    #echo new_checked $chked
+  fi
+ umount $mnt22 2> /dev/null
+ else
+ #echo mount $a failed
+ zu=1
+ fi
+ #umount $mnt22
+done
+prnerr "[not found $a]"
+return 1
+}
+
+mnt_find2() {
+mnt_find $1 $2 || (sleep 5 ; mnt_find $1 $2)
+}
+
+
+
+dofatal() {
+ash -c "$1"
+if [ "$?" != "0" ]; then
+  fatal "FATAL: fail run: $1"
+  else prnok "OK: $1"
+fi
+}
+
+
+run_system() {
+
+mount -o bind /dev /mnt/system/dev
+
+cd /mnt/system
+
+dbg "Unionfs mounted, read unomount proc sys and pivot"
+
+umount /sys
+#umount /proc
+#umount /dev
+
+mkdir -p /mnt/system/initrd
+dbg "Ready to pivot and /sbin/init"
+
+pivot_root . /mnt/system/initrd
+
+exec /bin/chroot . /sbin/init  < dev/console > dev/console 2>&1
+
+fatal "Never be here, exec /sbin/init"
+
+}

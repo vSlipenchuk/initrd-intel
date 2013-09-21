@@ -1,0 +1,7 @@
+gzip -d initrd.gz
+mount  -o loop initrd /mnt/initrd
+cd /mnt/initrd
+mc
+cd /home
+umount /mnt/initrd
+gzip initrd

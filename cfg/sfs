@@ -1,0 +1,66 @@
+# echo sfs management script
+
+#create a link root
+sfslink=/tmp/sfs
+mkdir -p $sfslink
+
+found_dir() {
+dir=''
+mntdir=/initrd/mnt
+for a in `ls -1d $mntdir/??; ls -1d $mntdir/?` ; do
+ if  [ `ls -1 $a | wc -l` = "0" ]; then
+   dir="$a"
+   #echo a is $a
+   break
+ fi
+done
+if [ dir = "" ]; then
+ echo no more dirs in $mntdir
+fi
+#dir=$mntdir/$dir
+echo "sfs will mount in dir =$dir="
+}
+
+
+case "$1" in
+ add)
+   name=`basename $2`
+   if [ -e $sfslink/$name ]; then echo ABORT: $name already exists; $0 list;  exit 1; fi
+   found_dir
+   if [ "$dir" = "" ]; then echo no more dirs; exit 1; fi
+   mount -o loop $2 $dir || echo mount loop $2 failed to $dir
+   if [ $? -ne 0 ]; then echo loop mount failed; exit 2; fi
+   ln -s $dir $sfslink/$name
+   mount -n -o remount,add:1:$dir=rr  aufs /
+   if [ $? -ne 0 ]; then echo fail add aufs; rm $sfslink/$name; umount $mntdir ; exit 2; fi
+   echo sfs add  $2 added with $mntdir link $sfslink/$name
+   exit 0
+   ;;
+ del|rm)
+   name=`basename $2`
+   mount -t aufs -f -n -o remount,del:$sfslink/$name  aufs /
+   if [ $? -ne 0 ]; then echo "error remount - busy on unknown $name"; exit 2; fi
+   dir=`readlink $sfslink/$name`
+   umount $dir
+   rm $sfslink/$name
+   echo removed $2 module
+   ;;
+ ls|dir|list|show)
+   echo list modules
+   ls -l $sfslink
+   ;;
+ mk|make)
+   dir=$2
+   if [ "$dir" = "" ]; then echo dir_name expected ; exit 1; fi
+   ( cd  /lib; ln -s  liblzma.so.5 liblzma.so.0 )
+   mksquashfs $dir $dir.sfs 
+   #-comp gzip
+   ;;
+  *)
+   echo "use: add|del|list|make"
+   ;;
+esac
+ 
+   
+ 
+   

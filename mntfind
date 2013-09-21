@@ -1,0 +1,52 @@
+# fnd mount point [file-to-find] [optional-point]
+
+file=$1
+
+if [ "$file" =  "" ] ; then
+ echo 'usage: <file-to-find> [mount-dir]'
+ return 2
+fi
+
+mnt=$2
+
+if [ "$mnt" = "" ] ; then
+ mkdir -p /mnt/temp
+ mnt=/mnt/temp
+fi
+
+chked=""
+fnd=""
+
+for a in $(ls -1d /dev/sd* /dev/hd*) ; do
+ mount $a $mnt 2> /dev/null
+ #echo last cmd $? for $a
+ if [ "$?" = "0" ]; then
+ #echo MOUNT_OK $a
+  if [ -e "$mnt/$file" ] ; then
+   #echo FILE $file exists on $a
+   fnd="$fnd$a;";
+   if [ "$2" != "" ]; then
+   echo $a;
+   exit 0
+   fi
+  else
+    chked="$chked$a;"
+    #echo new_checked $chked
+  fi
+ umount $mnt;
+ else
+ #echo mount $a failed
+ zu=1
+ fi
+ #umount $mnt
+done
+
+
+if [ "$fnd" != "" ] ; then
+ echo \"$file\" found-in $fnd
+ exit 0;
+else
+ echo NO-FILE \"$file\" checked $chked
+fi
+
+return 1

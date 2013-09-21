@@ -1,0 +1,32 @@
+# debug initrd script
+
+name=initrd3
+dir=`pwd`
+
+mntdir=/mnt/ddd
+testdev=/dev/sdb
+
+mkdir -p  $mntdir
+umount $mntdir
+mount /dev/sdb1  $mntdir
+
+
+mkdir -p /mnt/initrd
+gzip -d $name.gz
+mount  -o loop $name /mnt/initrd
+cd /mnt/initrd
+mc
+
+cd $dir
+umount /mnt/initrd
+gzip $name
+
+sync
+cp $name.gz $mntdir
+sync
+
+umount $mntdir
+sync
+
+qemu -hda /dev/sdb -hdb /mnt/c/tmp/tmpdisk.img   --localtime -m 512
+mount /dev/sdb1 $mntdir

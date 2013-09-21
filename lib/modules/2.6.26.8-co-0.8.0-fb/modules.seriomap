@@ -1,0 +1,2 @@
+# serio module       type extra id   proto
+serio_raw            0x01 0xff  0xff 0xff
