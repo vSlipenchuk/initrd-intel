@@ -7,7 +7,7 @@ case "$1" in
     mkdir -p proc dev sys
     (cd mnt ; sh add_dir)
     rm /tmp/initrd$VERSION.sfs
-    mksquashfs . /tmp/initrd$VERSION.sfs
+    mksquashfs . /tmp/initrd$VERSION.sfs -e .git
     cp /tmp/initrd$VERSION.sfs /d/lnx
     sync
     srv drop
