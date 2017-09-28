@@ -131,11 +131,7 @@ if [ "$changes" != "" ] ; then
     fi
  mntfile="/mnt/dev2/$changes"
  fi
- if [ -d $mntfile ]; then
-    mount -o bind $mntfile /mnt/changes
-  else 
-    mount -o loop $mntfile /mnt/changes
- fi
+ mount -o loop $mntfile /mnt/changes
  if [ "$?" = "0" ] ; then
    prnok "[CHANGES: $mntfile]"
  else

@@ -1,3 +1,9 @@
+initrd6d.sfs -add /sys catalog
+
+initrd6c.sfs -add CHROOT INIT variances for debian wheezy
+
+initrd6a.sfs - add boot from changes dir
+
 initrd6.sfs - change to sfs archive
   run_system
   

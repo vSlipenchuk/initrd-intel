@@ -1,5 +1,18 @@
+for a in 0 1 2 3 4 5 6 7 8 9 
+do
+ mkdir -p $a
+ 
+done
+
+
+for a in dev dev2 live oldroot tmp changes system hd 
+do
+ mkdir -p $a
+done
+
+
 for a in 0 1 2 3 4 5 6 7 8 9; do
 for b in 0 1 2 3 4 5 6 7 8 9; do
- mkdir $a$b
+ mkdir -p $a$b
 done
 done

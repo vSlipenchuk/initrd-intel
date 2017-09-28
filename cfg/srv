@@ -1,7 +1,7 @@
 s=""
 
 
-for sdir in  /home/bin/  /cfg/ /etc/rc.d/rc.
+for sdir in  /home/bin/  /cfg/ /etc/rc.d/rc. /home/bin/cfg/
 do
   #echo chck $sdir
   if [ -f "$sdir$1" ]; then
@@ -12,6 +12,16 @@ done
 
 
 case $1 in
+video)
+  echo VideoMode
+  killall xfce4-power-manager
+  killall upowerd
+  ;;
+xauth)
+  echo FIX XAUTH DATA
+  xauth add :0 . `mcookie`
+  ;;
+
  dns) echo nameserver 8.8.8.8 > /etc/resolv.conf
  ;;
  install)
@@ -32,9 +42,18 @@ case $1 in
  usb)
  /cfg/x-two-finger
  ;;
- drop)
+ drop|dropcash)
  echo drop cash
  sync; echo 3 > /proc/sys/vm/drop_caches
+ ;;
+ ntp|ntpsync)
+   echo  "Now sync time with ru.pool.ntp.org ..."
+   ntpdate ru.pool.ntp.org
+   echo -ne "Date:  " && date
+ ;;
+ "")
+ echo "usage: <service> [stop|start]"
+ echo "   build-in commands: ntpsync dns dropcash"
  ;;
  *)
  if [ "$s" = "" ]; then

@@ -1,6 +1,6 @@
 #!/bin/ash
 
-VERSION=6a
+VERSION=6d
 
 prnerr() { echo -en "\033[37;1;41m$1\033[0m\n" ; }
 prnok()  { echo -en "\033[40;1;32m$1\033[0m\n" ; }
@@ -85,9 +85,41 @@ umount /sys
 mkdir -p /mnt/system/initrd
 dbg "Ready to pivot and /sbin/init"
 
-pivot_root . /mnt/system/initrd
 
-exec /bin/chroot . /sbin/init  < dev/console > dev/console 2>&1
+
+CHROOT_VAR="bin/chroot usr/sbin/chroot"
+CHROOT=""
+
+for r in $CHROOT_VAR ; do
+ if [ -x $r ]; then
+  CHROOT=$r
+  break
+ fi
+done
+
+if [ "$CHROOT" = "" ]; then
+  fatal "Chroot not found in $CHROOT_VAR"
+fi
+
+INIT_VAR="sbin/init usr/sbin/chroot"
+INIT=""
+
+for r in $INIT_VAR ; do
+ if [ -x $r ]; then
+  INIT=$r
+  break
+ fi
+done
+
+
+if [ "$INIT" = "" ]; then
+  fatal "Init not found in $INIT_VAR"
+fi
+
+prnok "Exec chroot:$CHROOT and init:$INIT"
+
+pivot_root . /mnt/system/initrd
+exec $CHROOT . $INIT  < dev/console > dev/console 2>&1
 
 fatal "Never be here, exec /sbin/init"
 

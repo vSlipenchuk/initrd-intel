@@ -1,0 +1,27 @@
+
+
+case "$1" in
+      ed)
+         scite $0 &
+	 ;;
+     none|clear)
+          if [ -r /tmp/nat2 ] ; then
+	     iface=`cat /tmp/nat2`
+	     iptables -t nat -D POSTROUTING --out-interface $iface -j MASQUERADE
+	     echo nat2 removed from $iface
+	     rm -rf /tmp/nat2
+	  else
+	     echo no_nat_forward
+	  fi
+          ;;
+     wlan*|eth*|usb*)
+          $0 none
+	   iface=$1
+	   echo 1 > /proc/sys/net/ipv4/ip_forward
+	   (ifconfig $iface) &&  ( iptables -t nat -A POSTROUTING --out-interface $iface -j MASQUERADE ) \
+	     && ( echo $iface > /tmp/nat2) && ( echo nat2 $iface started )
+	 ;;
+      *)
+          echo "usage: nat2 none|eth0|usb0"
+	  ;;
+esac

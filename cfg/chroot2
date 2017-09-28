@@ -1,0 +1,44 @@
+MNT="/dev /proc /sys  /dev/pts /tmp"
+MNT="$MNT /mnt/cdrom /var/run/dbus"
+
+
+if [ -d "$1"  ]; then
+ echo mount in "$d"
+else
+ echo "no dir $1"
+ exit
+fi
+
+root=$(cd $1; pwd)
+
+UMNT=""
+for d in $MNT
+do
+ mount -o bind $d $root/$d
+ if [ "$?" = "0" ]; then
+  echo "$d mounted OK"
+  UMNT="$d $UMNT"
+ else
+  echo "$d not mounted"
+ fi
+
+done
+
+echo "START chroot `cat $root/etc/HOSTNAME` in  $root UMNT=$UMNT"
+  shift
+  chroot $root $@
+  echo "DONE $root welcome back to `cat /etc/HOSTNAME`"
+  
+for d in $UMNT
+do
+ umount  $root/$d
+ if [ "$?" = "0" ]; then
+  echo "$d umounted OK"
+  UMNT="$d $UMNT"
+ else
+  echo "fail umount $d"
+ fi
+done
+
+echo "Done chroot"
+
